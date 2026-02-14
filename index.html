@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bouncy and Hoppy's Big Adventure</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: 'Comic Sans MS', cursive, sans-serif; }
+    #story {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      right: 20px;
+      color: white;
+      font-size: 32px;
+      text-align: center;
+      background: rgba(0,0,0,0.4);
+      padding: 15px;
+      border-radius: 20px;
+      pointer-events: none;
+      text-shadow: 2px 2px 4px black;
+    }
+    #title {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 60px;
+      color: #ffcc00;
+      text-shadow: 4px 4px 8px black;
+      pointer-events: none;
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="story"></div>
+  <div id="title">Bouncy & Hoppy's<br>Big Adventure</div>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.167.1/build/three.min.js"></script>
+  <script>
+    // Scene setup
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87CEEB);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+    const sun = new THREE.DirectionalLight(0xffffff, 1);
+    sun.position.set(20, 40, 30);
+    sun.castShadow = true;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
+    scene.add(sun);
+
+    // Ground
+    const groundGeo = new THREE.PlaneGeometry(200, 200);
+    const groundMat = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Simple trees
+    function addTree(x, z) {
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.8, 0.8, 4, 8),
+        new THREE.MeshStandardMaterial({ color: 0x8B4513 })
+      );
+      trunk.position.set(x, 2, z);
+      trunk.castShadow = true;
+      scene.add(trunk);
+
+      const leaves = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 16, 12),
+        new THREE.MeshStandardMaterial({ color: 0x228B22 })
+      );
+      leaves.position.set(x, 6, z);
+      leaves.castShadow = true;
+      scene.add(leaves);
+    }
+    addTree(-25, -20);
+    addTree(30, -15);
+    addTree(-20, 25);
+    addTree(35, 20);
+
+    // Flower
+    const flower = new THREE.Group();
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.15, 0.15, 3, 8),
+      new THREE.MeshStandardMaterial({ color: 0x00ff00 })
+    );
+    stem.position.y = 1.5;
+    flower.add(stem);
+
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.6, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0xffff00 })
+    );
+    center.position.y = 3.5;
+    flower.add(center);
+
+    for (let i = 0; i < 8; i++) {
+      const petal = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 16, 8),
+        new THREE.MeshStandardMaterial({ color: 0xff69b4 })
+      );
+      petal.scale.x = 1.8;
+      const angle = i * Math.PI * 2 / 8;
+      petal.position.set(Math.cos(angle) * 0.8, 3.5, Math.sin(angle) * 0.8);
+      flower.add(petal);
+    }
+    flower.position.set(25, 0, 0);
+    scene.add(flower);
+
+    // Character creator
+    function createBall(color) {
+      const ball = new THREE.Mesh(
+        new THREE.SphereGeometry(1.2, 32, 32),
+        new THREE.MeshStandardMaterial({ color })
+      );
+      ball.castShadow = true;
+      ball.receiveShadow = true;
+
+      // Eyes
+      const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+      const leftEye = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 16), eyeMat);
+      leftEye.position.set(-0.4, 0.3, 1);
+      ball.add(leftEye);
+      const rightEye = leftEye.clone();
+      rightEye.position.x = 0.4;
+      ball.add(rightEye);
+
+      // Eye shines
+      const shine = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 16, 16),
+        new THREE.MeshStandardMaterial({ color: 0xffffff })
+      );
+      shine.position.z = 0.15;
+      leftEye.add(shine.clone());
+      rightEye.add(shine);
+
+      // Smile
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-0.5, -0.2, 1.1),
+        new THREE.Vector3(0, -0.5, 1.1),
+        new THREE.Vector3(0.5, -0.2, 1.1)
+      );
+      const points = curve.getPoints(30);
+      const smileGeo = new THREE.BufferGeometry().setFromPoints(points);
+      const smile = new THREE.Line(smileGeo, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 5 }));
+      ball.add(smile);
+
+      return ball;
+    }
+
+    const bouncy = createBall(0xff0000); // Red
+    bouncy.position.set(0, 1.2, 0);
+    scene.add(bouncy);
+
+    const hoppy = createBall(0xffff00); // Yellow
+    hoppy.position.set(-30, 1.2, 5);
+    hoppy.visible = false;
+    scene.add(hoppy);
+
+    // Clouds
+    for (let i = 0; i < 6; i++) {
+      const cloud = new THREE.Mesh(
+        new THREE.SphereGeometry(6, 8, 8),
+        new THREE.MeshStandardMaterial({ color: 0xffffff })
+      );
+      cloud.position.set(-40 + i * 20, 40, -20 + Math.random() * 20);
+      cloud.scale.set(1.5, 0.8, 1);
+      scene.add(cloud);
+    }
+
+    camera.position.set(0, 8, 20);
+
+    const clock = new THREE.Clock();
+    const storyText = document.getElementById('story');
+    const title = document.getElementById('title');
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // Title fade in/out
+      if (t < 4) title.style.opacity = Math.min(t / 2, 1);
+      else title.style.opacity = Math.max(1 - (t - 4) / 2, 0);
+
+      // Story text
+      if (t < 15) storyText.textContent = "Meet Bouncy, the happiest little red ball in the meadow!";
+      else if (t < 35) storyText.textContent = "One day, Bouncy sees a beautiful flower and bounces over to say hello!";
+      else if (t < 55) storyText.textContent = "Bouncy dances with joy around the flower!";
+      else if (t < 75) storyText.textContent = "Suddenly, his best friend Hoppy arrives!";
+      else if (t < 100) storyText.textContent = "Together they bounce higher than ever! Best friends forever!";
+      else storyText.textContent = "Bouncy and Hoppy bounce happily ever after! 🎈";
+
+      // Bouncy animation
+      if (t < 35) {
+        // Bounce in place then roll to flower
+        const localT = t < 15 ? t : 15 + (t - 15) * 0.8;
+        bouncy.position.x = (t - 15) * 1.2;
+        bouncy.position.y = 1.2 + Math.abs(Math.sin(localT * 8)) * 1.8;
+      } else {
+        // Happy dance near flower
+        bouncy.position.x = 23 + Math.sin(t * 3) * 3;
+        bouncy.position.z = Math.sin(t * 2.5) * 3;
+        bouncy.position.y = 1.2 + Math.abs(Math.sin(t * 10)) * 3;
+      }
+
+      // Hoppy appears at 55s
+      if (t > 55) {
+        hoppy.visible = true;
+        hoppy.position.x = 20 + Math.sin(t * 8) * 4;
+        hoppy.position.z = Math.cos(t * 7) * 4;
+        hoppy.position.y = 1.2 + Math.abs(Math.sin(t * 10 + 2)) * 3;
+      }
+
+      // Gentle camera follow
+      camera.position.x = bouncy.position.x * 0.3;
+      camera.position.z = bouncy.position.z + 25;
+      camera.lookAt(bouncy.position.x, 3, bouncy.position.z - 5);
+
+      renderer.render(scene, camera);
+    }
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>
